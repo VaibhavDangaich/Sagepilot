@@ -98,9 +98,26 @@ A single append-only `run_activity_log` table stores everything: incoming events
 and sleep decisions, agent actions, manual instructions, and the final output — matching
 the spec's own suggested simplification over a separate messages table. The `runs`
 table holds the current snapshot (status, compact memory summary, wake policy, next
-wake time). Compaction is intentionally simple: the agent's memory summary is a
-rolling, agent-maintained digest, not the full history — the activity only ever reads
-the last ~30 timeline rows plus this summary, not the entire log.
+wake time).
+
+Compaction happens in two layers, both in `app/activities/agent_activity.py` and
+`app/agent/compaction.py`:
+
+1. **Importance-weighted timeline retention**, not a blind "last N rows" window.
+   `_load_recent_timeline` fetches a lookback of raw rows, then always keeps business
+   actions, manual instructions, final output, and unknown-event escalations regardless
+   of age, while capping routine rows (ordinary incoming events, non-escalated
+   wake/sleep decisions, system bookkeeping) to the most recent few. The assumption:
+   older high-signal facts have already been folded into the agent's own rolling
+   `memory_summary` by a previous turn, so this window only needs to carry short-term
+   detail, not the long-term record.
+2. **Second-pass summary compaction.** The agent's `memory_summary` is itself a
+   rolling, agent-maintained digest — the spec's own baseline example ("maintaining a
+   rolling summary"). If that digest grows past ~600 characters, `run_agent` spends one
+   extra small LLM call (`compact_memory_if_needed`) compressing it back down before
+   persisting it, so an order that runs for a very long time doesn't end up feeding an
+   ever-growing wall of prose into every future turn's context. Most turns never cross
+   the threshold, so this adds no cost to the common case.
 
 ## continue_as_new
 

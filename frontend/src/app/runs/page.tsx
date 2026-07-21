@@ -21,8 +21,8 @@ import type { RunStatus, RunSummary } from "@/lib/types";
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <Card className="p-4">
-      <p className="text-2xl font-semibold text-neutral-100">{value}</p>
-      <p className="text-xs text-neutral-400">{label}</p>
+      <p className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">{value}</p>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{label}</p>
     </Card>
   );
 }
@@ -81,8 +81,10 @@ export default function RunsPage() {
   return (
     <div className="space-y-8">
       <FadeIn>
-        <PageHeading eyebrow="Order Lifecycle" className="text-2xl">Runs</PageHeading>
-        <p className="mt-1.5 text-sm text-neutral-300">
+        <PageHeading eyebrow="Order Lifecycle" className="text-2xl">
+          Runs
+        </PageHeading>
+        <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-300">
           Each run starts one long-running Temporal workflow for a single order.
         </p>
       </FadeIn>
@@ -109,9 +111,12 @@ export default function RunsPage() {
                   ))}
                 </Select>
                 {supervisors?.length === 0 && (
-                  <p className="mt-1.5 text-xs text-neutral-400">
+                  <p className="mt-1.5 text-xs text-neutral-500 dark:text-neutral-400">
                     No supervisors yet —{" "}
-                    <Link href="/supervisors" className="font-medium text-amber-400 hover:underline">
+                    <Link
+                      href="/supervisors"
+                      className="font-medium text-amber-600 hover:underline dark:text-amber-400"
+                    >
                       create one
                     </Link>{" "}
                     first.
@@ -136,7 +141,7 @@ export default function RunsPage() {
                 placeholder="e.g. prioritize speed over cost for this order"
               />
             </div>
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
             <Button type="submit" disabled={submitting}>
               {submitting ? "Starting…" : "Start run"}
             </Button>
@@ -145,8 +150,10 @@ export default function RunsPage() {
       </FadeIn>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-neutral-400">All runs</h2>
-        {isLoading && <p className="text-sm text-neutral-400">Loading…</p>}
+        <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">All runs</h2>
+        {isLoading && (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>
+        )}
         {runs?.length === 0 && <EmptyState>No runs yet — start one above.</EmptyState>}
         <ul className="space-y-3">
           <AnimatePresence>
@@ -158,10 +165,12 @@ export default function RunsPage() {
                 exit={{ opacity: 0 }}
               >
                 <Link href={`/runs/${run.id}`}>
-                  <Card className="flex items-center justify-between p-4 transition-colors hover:border-amber-400/25 hover:bg-neutral-900/80">
+                  <Card className="flex items-center justify-between p-4 transition-colors hover:border-amber-500/30 dark:hover:border-amber-400/25 dark:hover:bg-neutral-900/80">
                     <div>
-                      <span className="font-medium text-neutral-100">{run.order_id}</span>
-                      <span className="ml-2 text-xs text-neutral-400">
+                      <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                        {run.order_id}
+                      </span>
+                      <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">
                         {run.temporal_workflow_id}
                       </span>
                     </div>

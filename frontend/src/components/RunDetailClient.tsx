@@ -17,13 +17,41 @@ import {
 } from "@/components/ui";
 
 const KIND_META: Record<ActivityLogKind, { label: string; dot: string; glow: string }> = {
-  incoming_event: { label: "Incoming event", dot: "bg-sky-400", glow: "shadow-sky-400/50" },
-  wake_decision: { label: "Woke up", dot: "bg-emerald-400", glow: "shadow-emerald-400/50" },
-  sleep_decision: { label: "Went to sleep", dot: "bg-slate-400", glow: "shadow-slate-400/50" },
-  agent_action: { label: "Action taken", dot: "bg-amber-400", glow: "shadow-amber-400/50" },
-  manual_instruction: { label: "Instruction added", dot: "bg-rose-400", glow: "shadow-rose-400/50" },
-  final_output: { label: "Final output", dot: "bg-neutral-100", glow: "shadow-neutral-100/50" },
-  system: { label: "System", dot: "bg-neutral-500", glow: "shadow-neutral-500/50" },
+  incoming_event: {
+    label: "Incoming event",
+    dot: "bg-sky-500 dark:bg-sky-400",
+    glow: "shadow-sky-500/50",
+  },
+  wake_decision: {
+    label: "Woke up",
+    dot: "bg-emerald-500 dark:bg-emerald-400",
+    glow: "shadow-emerald-500/50",
+  },
+  sleep_decision: {
+    label: "Went to sleep",
+    dot: "bg-slate-500 dark:bg-slate-400",
+    glow: "shadow-slate-500/50",
+  },
+  agent_action: {
+    label: "Action taken",
+    dot: "bg-amber-500 dark:bg-amber-400",
+    glow: "shadow-amber-500/50",
+  },
+  manual_instruction: {
+    label: "Instruction added",
+    dot: "bg-rose-500 dark:bg-rose-400",
+    glow: "shadow-rose-500/50",
+  },
+  final_output: {
+    label: "Final output",
+    dot: "bg-neutral-800 dark:bg-neutral-100",
+    glow: "shadow-neutral-800/50",
+  },
+  system: {
+    label: "System",
+    dot: "bg-neutral-400 dark:bg-neutral-500",
+    glow: "shadow-neutral-400/50",
+  },
 };
 
 function formatPayload(kind: ActivityLogKind, payload: Record<string, unknown>): string {
@@ -102,7 +130,9 @@ export default function RunDetailClient({ runId }: { runId: string }) {
     }
   }
 
-  if (!run) return <p className="text-sm text-neutral-400">Loading…</p>;
+  if (!run) {
+    return <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>;
+  }
 
   const isTerminal = run.status === "completed" || run.status === "terminated";
   const ordered = timeline?.slice().reverse();
@@ -112,14 +142,18 @@ export default function RunDetailClient({ runId }: { runId: string }) {
       <FadeIn>
         <Card className="flex items-start justify-between p-6">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-100">
+            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
               Order {run.order_id}
             </h1>
-            <p className="mt-0.5 text-xs text-neutral-400">{run.temporal_workflow_id}</p>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+              {run.temporal_workflow_id}
+            </p>
             {countdown && !isTerminal && (
-              <p className="mt-2 text-sm text-neutral-300">
+              <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
                 Next wake-up in{" "}
-                <span className="font-mono font-medium text-amber-300">{countdown}</span>
+                <span className="font-mono font-medium text-amber-700 dark:text-amber-300">
+                  {countdown}
+                </span>
               </p>
             )}
           </div>
@@ -128,16 +162,18 @@ export default function RunDetailClient({ runId }: { runId: string }) {
       </FadeIn>
 
       {error && (
-        <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+        <p className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
           {error}
         </p>
       )}
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-3 md:col-span-2">
-          <h2 className="text-sm font-medium text-neutral-400">Timeline</h2>
+          <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+            Timeline
+          </h2>
           {ordered?.length === 0 && <EmptyState>No activity yet.</EmptyState>}
-          <ol className="relative space-y-4 border-l border-white/10 pl-6">
+          <ol className="relative space-y-4 border-l border-neutral-300 pl-6 dark:border-white/10">
             <AnimatePresence initial={false}>
               {ordered?.map((entry) => {
                 const meta = KIND_META[entry.kind];
@@ -153,11 +189,13 @@ export default function RunDetailClient({ runId }: { runId: string }) {
                       className={`absolute top-1.5 -left-[1.6rem] h-2.5 w-2.5 rounded-full shadow-[0_0_8px] ${meta.dot} ${meta.glow}`}
                     />
                     <Card className="p-3">
-                      <div className="flex items-center justify-between text-xs text-neutral-400">
-                        <span className="font-medium text-neutral-300">{meta.label}</span>
+                      <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                        <span className="font-medium text-neutral-600 dark:text-neutral-300">
+                          {meta.label}
+                        </span>
                         <span>{new Date(entry.created_at).toLocaleTimeString()}</span>
                       </div>
-                      <p className="mt-1 text-sm text-neutral-200">
+                      <p className="mt-1 text-sm text-neutral-800 dark:text-neutral-200">
                         {formatPayload(entry.kind, entry.payload)}
                       </p>
                     </Card>
@@ -170,39 +208,59 @@ export default function RunDetailClient({ runId }: { runId: string }) {
 
         <div className="space-y-4">
           <Card className="p-4">
-            <h2 className="text-sm font-medium text-neutral-400">Memory summary</h2>
-            <p className="mt-1.5 whitespace-pre-wrap text-sm text-neutral-200">
+            <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+              Memory summary
+            </h2>
+            <p className="mt-1.5 text-sm whitespace-pre-wrap text-neutral-800 dark:text-neutral-200">
               {run.memory_summary || "(empty — no turns yet)"}
             </p>
           </Card>
           <Card className="p-4">
-            <h2 className="text-sm font-medium text-neutral-400">Wake policy</h2>
-            <p className="mt-1.5 whitespace-pre-wrap text-sm text-neutral-200">
+            <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+              Wake policy
+            </h2>
+            <p className="mt-1.5 text-sm whitespace-pre-wrap text-neutral-800 dark:text-neutral-200">
               {run.wake_policy || "(using default classifier rules)"}
             </p>
           </Card>
 
           {isTerminal && (run.final_summary || run.final_learnings) && (
             <Card className="space-y-3 p-4">
-              <h2 className="text-sm font-medium text-neutral-400">Final output</h2>
+              <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                Final output
+              </h2>
               <div>
-                <p className="text-xs font-medium text-neutral-400">Summary</p>
-                <p className="text-sm text-neutral-200">{run.final_summary}</p>
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  Summary
+                </p>
+                <p className="text-sm text-neutral-800 dark:text-neutral-200">
+                  {run.final_summary}
+                </p>
               </div>
               <div>
-                <p className="text-xs font-medium text-neutral-400">Key learnings</p>
-                <p className="text-sm text-neutral-200">{run.final_learnings}</p>
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  Key learnings
+                </p>
+                <p className="text-sm text-neutral-800 dark:text-neutral-200">
+                  {run.final_learnings}
+                </p>
               </div>
               <div>
-                <p className="text-xs font-medium text-neutral-400">Feedback</p>
-                <p className="text-sm text-neutral-200">{run.final_feedback}</p>
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  Feedback
+                </p>
+                <p className="text-sm text-neutral-800 dark:text-neutral-200">
+                  {run.final_feedback}
+                </p>
               </div>
             </Card>
           )}
 
           {!isTerminal && (
             <Card className="space-y-5 p-4">
-              <h2 className="text-sm font-medium text-neutral-400">Controls</h2>
+              <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                Controls
+              </h2>
 
               <div>
                 <Label>Inject event</Label>
@@ -243,7 +301,7 @@ export default function RunDetailClient({ runId }: { runId: string }) {
                       placeholder="e.g. carrier_lost_package"
                       className="mt-2"
                     />
-                    <p className="mt-1 text-xs text-neutral-400">
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                       Not one of the built-in types — the classifier will treat it as
                       unrecognized and always escalate it for the agent to interpret.
                     </p>
@@ -274,7 +332,7 @@ export default function RunDetailClient({ runId }: { runId: string }) {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 border-t border-white/10 pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-neutral-200 pt-4 dark:border-white/10">
                 {run.status === "paused" ? (
                   <Button
                     variant="secondary"

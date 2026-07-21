@@ -80,7 +80,7 @@ export default function SupervisorsPage() {
         <PageHeading eyebrow="Configuration" className="text-2xl">
           Supervisors
         </PageHeading>
-        <p className="mt-1.5 text-sm text-neutral-300">
+        <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-300">
           A supervisor is a reusable template — base instruction, allowed actions, and
           wake behavior — applied when starting a run for a specific order.
         </p>
@@ -95,7 +95,7 @@ export default function SupervisorsPage() {
                   key={preset.name}
                   type="button"
                   onClick={() => applyPreset(preset)}
-                  className="rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-neutral-300 transition-colors hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-amber-300"
+                  className="rounded-full border border-neutral-300 px-3 py-1 text-xs font-medium text-neutral-600 transition-colors hover:border-amber-500/40 hover:bg-amber-500/10 hover:text-amber-700 dark:border-white/10 dark:text-neutral-300 dark:hover:border-amber-400/40 dark:hover:bg-amber-400/10 dark:hover:text-amber-300"
                 >
                   Use preset: {preset.name}
                 </button>
@@ -133,8 +133,8 @@ export default function SupervisorsPage() {
                       key={action}
                       className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                         checked
-                          ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-                          : "border-white/10 text-neutral-300 hover:bg-white/5"
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-300"
+                          : "border-neutral-300 text-neutral-600 hover:bg-neutral-100 dark:border-white/10 dark:text-neutral-300 dark:hover:bg-white/5"
                       }`}
                     >
                       <input
@@ -172,7 +172,7 @@ export default function SupervisorsPage() {
               </div>
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
             <Button type="submit" disabled={submitting}>
               {submitting ? "Creating…" : "Create supervisor"}
@@ -182,8 +182,12 @@ export default function SupervisorsPage() {
       </FadeIn>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-neutral-400">Existing supervisors</h2>
-        {isLoading && <p className="text-sm text-neutral-400">Loading…</p>}
+        <h2 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+          Existing supervisors
+        </h2>
+        {isLoading && (
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">Loading…</p>
+        )}
         {supervisors?.length === 0 && <EmptyState>No supervisors yet.</EmptyState>}
         <ul className="space-y-3">
           <AnimatePresence>
@@ -196,13 +200,17 @@ export default function SupervisorsPage() {
               >
                 <Card className="p-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-neutral-100">{s.name}</span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                      {s.name}
+                    </span>
+                    <span className="text-xs text-neutral-500 dark:text-neutral-400">
                       {s.model_config.model} · {s.wake_aggressiveness}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-neutral-300">{s.base_instruction}</p>
-                  <p className="mt-2 text-xs text-neutral-400">
+                  <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                    {s.base_instruction}
+                  </p>
+                  <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
                     actions: {s.available_actions.join(", ")}
                   </p>
                 </Card>

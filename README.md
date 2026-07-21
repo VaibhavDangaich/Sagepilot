@@ -204,10 +204,25 @@ Beyond the required scope, this implements:
   simulated turns and asserts the epoch counter advances.
 - ✅ **Multiple supervisor templates** — unlimited supervisor configs, plus two
   hardcoded presets to start from.
+- ✅ **Richer memory-compaction strategy** — two layers on top of the baseline rolling
+  summary (which the spec's own example already covers):
+  1. **Importance-weighted timeline retention** (`_load_recent_timeline` in
+     `agent_activity.py`): instead of a blind "last 30 rows" sliding window, business
+     actions, manual instructions, final output, and unknown-event escalations are
+     always kept within the lookback regardless of age; only routine entries (ordinary
+     incoming events, non-escalated wake/sleep decisions, system bookkeeping) are capped
+     to the most recent few. Older high-signal facts are assumed to already be folded
+     into the agent's own `memory_summary` — this window is short-term detail, not
+     long-term memory.
+  2. **Second-pass summary compaction** (`app/agent/compaction.py`): if the agent's
+     `memory_summary` itself grows past ~600 characters, one extra small LLM call
+     compresses it back down before it's persisted, so a very long-running order
+     doesn't end up feeding an ever-growing wall of prose into every future turn. Most
+     turns never cross the threshold, so this adds no cost to the common case.
 
 Not done (lower priority per the spec's own wording, and flagged rather than silently
-skipped): a more sophisticated memory-compaction strategy beyond the baseline rolling
-summary, and a richer cross-run analytics view.
+skipped): a richer cross-run analytics view (an aggregate dashboard across all runs,
+beyond the simple stat tiles already on the Runs page).
 
 ### The classifier, concretely
 

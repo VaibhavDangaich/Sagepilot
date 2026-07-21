@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * Class-based dark mode: `dark:` utilities apply when `.dark` is present on
+ * <html> (set by the inline script in layout.tsx before paint, and toggled
+ * by <ThemeToggle>), not by prefers-color-scheme. Tailwind v4 needs this
+ * declared explicitly to switch from its default media-query strategy.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -8,19 +16,19 @@
 }
 
 /*
- * This app commits to a single dark theme rather than following
- * prefers-color-scheme — every page uses explicit Tailwind color
- * utilities for that theme.
- *
- * Important: any plain, unlayered rule here (like a bare `body {...}`)
- * takes precedence over ALL Tailwind utility classes regardless of
- * specificity, because Tailwind v4 emits utilities inside CSS cascade
- * layers. Keep this file free of unlayered rules that set color/background
- * on real elements — a previous version of this file had exactly that bug
- * and it silently broke every text/background utility in the app.
+ * Important: any plain, unlayered rule here (like a bare `body {...}`) takes
+ * precedence over ALL Tailwind utility classes regardless of specificity,
+ * because Tailwind v4 emits utilities inside CSS cascade layers. Keep this
+ * file free of unlayered rules that set color/background on real elements —
+ * a previous version of this file had exactly that bug (a bare `body`
+ * color/background rule) and it silently broke every text/background
+ * utility in the app once the OS was in dark mode.
  */
 @layer base {
   html {
+    color-scheme: light;
+  }
+  html.dark {
     color-scheme: dark;
   }
 }

@@ -8,7 +8,7 @@ export default function Home() {
         <PageHeading eyebrow="AI Supervisor POC" className="text-3xl sm:text-4xl">
           Order Supervisor
         </PageHeading>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
           A long-running AI supervisor that watches a single order&apos;s lifecycle end to
           end — reasoning at workflow start, on incoming events, and on scheduled
           wake-ups, then sleeping in between rather than polling continuously.
@@ -17,9 +17,11 @@ export default function Home() {
       <div className="grid gap-4 sm:grid-cols-2">
         <FadeIn delay={0.08}>
           <Link href="/supervisors" className="group block h-full">
-            <Card className="h-full p-5 transition-colors group-hover:border-amber-400/25 group-hover:bg-neutral-900/80">
-              <h2 className="font-medium text-neutral-100">Supervisors →</h2>
-              <p className="mt-1.5 text-sm text-neutral-300">
+            <Card className="h-full p-5 transition-colors group-hover:border-amber-500/30 dark:group-hover:border-amber-400/25 dark:group-hover:bg-neutral-900/80">
+              <h2 className="font-medium text-neutral-900 dark:text-neutral-100">
+                Supervisors →
+              </h2>
+              <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-300">
                 Configure a supervisor template: base instruction, available actions, wake
                 policy, and model.
               </p>
@@ -28,9 +30,9 @@ export default function Home() {
         </FadeIn>
         <FadeIn delay={0.16}>
           <Link href="/runs" className="group block h-full">
-            <Card className="h-full p-5 transition-colors group-hover:border-amber-400/25 group-hover:bg-neutral-900/80">
-              <h2 className="font-medium text-neutral-100">Runs →</h2>
-              <p className="mt-1.5 text-sm text-neutral-300">
+            <Card className="h-full p-5 transition-colors group-hover:border-amber-500/30 dark:group-hover:border-amber-400/25 dark:group-hover:bg-neutral-900/80">
+              <h2 className="font-medium text-neutral-900 dark:text-neutral-100">Runs →</h2>
+              <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-300">
                 Start a run for an order, inject events, inspect the timeline and memory, and
                 control a live run.
               </p>
