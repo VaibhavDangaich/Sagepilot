@@ -62,3 +62,30 @@ Optional, if time allows: show `continue_as_new` conceptually by explaining the
 `seq_counter` threshold in `ARCHITECTURE.md` (triggering it live would require ~300
 turns, impractical to record in real time — it's covered by an automated test instead,
 `test_continue_as_new_triggers_past_seq_threshold` in `backend/tests/test_workflow.py`).
+
+## Custom additions (not in the spec — worth its own segment in the video)
+
+These aren't required or "Good-to-Have" items — they're what we built on top. See the
+README's "Custom additions" section for the full write-up; this is the demo sequence:
+
+9. **Log a human-curated lesson** — on a run that hit a problem event (e.g. the
+   `payment_failed` one from step 3), click **Log outcome** under that timeline entry,
+   pick **Our side**, and fill in a problem/resolution (e.g. "webhook race condition" /
+   "added retry with idempotency key"). Show it appear at `/lessons` tagged `human` +
+   `our side`.
+
+10. **Cross-run semantic recall** — start a *new, unrelated* run, and inject a
+    differently-worded but similar custom event (e.g. `payment_webhook_missed` with a
+    note describing a lost confirmation). Show the timeline's `sleep_decision` entry
+    expand to **"Consulted 1 past lesson from long-term memory"**, revealing the lesson
+    logged in step 9 — proof the semantic search found it despite the different
+    wording, not just a keyword match.
+
+11. **Graph view** — on the run detail page, toggle **Timeline → Graph**. Show the
+    same run rendered as a node graph, including the dashed branch to the consulted
+    lesson from step 10.
+
+12. **Ask about this order** — in the chat panel, ask something like *"why did the
+    agent escalate this order?"* and show the grounded answer. Optionally ask something
+    not in the context (e.g. "what's the customer's email?") to show it declines rather
+    than hallucinating.

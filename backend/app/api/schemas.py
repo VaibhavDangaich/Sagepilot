@@ -9,8 +9,15 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.db.models import Run, RunActivityLog
-from app.domain import ActionName, ModelConfig, OrderEvent, WakeAggressiveness
+from app.db.models import LongTermLesson, Run, RunActivityLog
+from app.domain import (
+    ActionName,
+    FaultSide,
+    LessonRecord,
+    ModelConfig,
+    OrderEvent,
+    WakeAggressiveness,
+)
 
 
 class CreateSupervisorRequest(BaseModel):
@@ -37,6 +44,33 @@ class AddInstructionRequest(BaseModel):
 
 class InjectEventRequest(BaseModel):
     event: OrderEvent
+
+
+class ChatRequest(BaseModel):
+    """A one-off, stateless question about a specific order's supervision
+    history — custom addition beyond the spec (see README). Deliberately
+    not a conversation: each question is answered fresh from that order's
+    current timeline/memory, with no server-side chat history, and it's
+    kept entirely separate from the actual order-supervisor agent (an
+    admin analysis tool, not a second cooperating agent)."""
+
+    question: str
+
+
+class ChatResponse(BaseModel):
+    answer: str
+
+
+class LogLessonRequest(BaseModel):
+    """A human-curated lesson — the manual counterpart to the AI-inferred
+    lessons captured automatically at run finalization. `problem` is
+    expected to already describe the specific event it's about (the UI
+    pre-fills it from the timeline entry the user is annotating). Custom
+    addition beyond the spec, see README."""
+
+    fault: FaultSide
+    problem: str
+    resolution: str = ""
 
 
 class RunSummary(BaseModel):
@@ -93,3 +127,16 @@ def run_to_detail(row: Run) -> RunDetail:
 
 def log_row_to_entry(row: RunActivityLog) -> TimelineEntry:
     return TimelineEntry(seq=row.seq, kind=row.kind, payload=row.payload, created_at=row.created_at)
+
+
+def lesson_to_record(row: LongTermLesson) -> LessonRecord:
+    return LessonRecord(
+        id=str(row.id),
+        order_id=row.order_id,
+        event_type=row.event_type,
+        problem=row.problem,
+        resolution=row.resolution,
+        source=row.source,
+        fault=row.fault,
+        created_at=row.created_at,
+    )

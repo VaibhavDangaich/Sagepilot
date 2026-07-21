@@ -37,6 +37,9 @@ class AgentState(TypedDict):
     wake_policy: str
     instructions: list[str]
     recent_timeline: list[str]
+    # Cross-run "lessons learned" from semantically similar past issues on
+    # *other* orders — a custom addition beyond the spec, see README.
+    relevant_lessons: NotRequired[list[str]]
     mode: str  # "turn" | "final_summary"
     prompt: NotRequired[str]
     decision: NotRequired[AgentDecision | FinalOutput]
@@ -46,6 +49,10 @@ def _render_context(state: AgentState) -> str:
     supervisor = state["supervisor"]
     timeline_block = "\n".join(state["recent_timeline"]) or "(no prior activity)"
     instructions_block = "\n".join(f"- {i}" for i in state["instructions"]) or "(none)"
+    lessons = state.get("relevant_lessons") or []
+    lessons_block = (
+        "\n\n".join(lessons) if lessons else "(none found similar enough to this situation)"
+    )
     return f"""Order: {state["order_id"]}
 
 Base instruction: {supervisor.base_instruction}
@@ -59,6 +66,10 @@ Compact memory summary so far:
 Recent timeline (most recent last):
 {timeline_block}
 
+Relevant lessons from past, unrelated orders (may or may not apply here — use your \
+judgment):
+{lessons_block}
+
 You were invoked because: {state["trigger_reason"]}"""
 
 
@@ -68,7 +79,12 @@ def load_context(state: AgentState) -> dict[str, Any]:
 
 This run is ending. Produce a final wrap-up: a concise final summary of \
 what happened, the key learnings for next time, and any feedback or \
-recommendations for whoever configured this supervisor."""
+recommendations for whoever configured this supervisor. If a specific, \
+concrete problem occurred during this run (not a routine event), also set \
+notable_problem and notable_resolution describing it and how it was \
+handled — this gets remembered for future, unrelated orders that hit \
+something similar. Leave both unset if nothing about this run's issues \
+(if any) is distinctive enough to be worth recalling later."""
     else:
         supervisor = state["supervisor"]
         actions_list = ", ".join(a.value for a in supervisor.available_actions)

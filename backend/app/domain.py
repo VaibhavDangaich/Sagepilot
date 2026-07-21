@@ -134,6 +134,14 @@ class AgentDecision(BaseModel):
     )
     reasoning_note: str
     recommend_complete: bool = False
+    consulted_lessons: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Past problem/resolution lessons that were surfaced to the agent this turn "
+            "(semantic search over the cross-run lessons store, not part of the LLM's "
+            "own output — attached by the activity for UI transparency, see README)."
+        ),
+    )
 
 
 class FinalOutput(BaseModel):
@@ -142,6 +150,45 @@ class FinalOutput(BaseModel):
     final_summary: str
     key_learnings: str
     feedback: str
+    notable_problem: str | None = Field(
+        default=None,
+        description=(
+            "A specific, concrete problem that occurred during this run, worth "
+            "remembering for future unrelated orders that hit something similar "
+            "(e.g. a particular kind of payment failure or delay). Leave unset if "
+            "nothing about this run's issues (if any) is distinctive enough to be "
+            "useful to recall later."
+        ),
+    )
+    notable_resolution: str | None = Field(
+        default=None,
+        description="How notable_problem was resolved. Required if notable_problem is set.",
+    )
+
+
+class LessonSource(StrEnum):
+    AGENT = "agent"  # auto-extracted by the wrap-up LLM call at run finalization
+    HUMAN = "human"  # manually logged from the UI against a timeline entry
+
+
+class FaultSide(StrEnum):
+    INTERNAL = "internal"  # our side — should carry a resolution
+    CLIENT = "client"  # the customer/external party's side
+
+
+class LessonRecord(BaseModel):
+    """A cross-run 'lessons learned' entry — see the README's 'Custom
+    addition' section. Not part of the assignment spec; this app's own
+    extension for long-term, cross-order memory."""
+
+    id: str
+    order_id: str
+    event_type: str | None
+    problem: str
+    resolution: str
+    source: LessonSource
+    fault: FaultSide | None
+    created_at: datetime
 
 
 class RunSnapshot(BaseModel):

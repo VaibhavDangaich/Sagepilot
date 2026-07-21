@@ -22,6 +22,7 @@ from temporalio.worker import Worker
 from app.activities.agent_activity import AgentActivityInput
 from app.activities.business_actions import ExecuteActionInput
 from app.activities.classifier_activity import HandleIncomingEventInput
+from app.activities.lessons import StoreLessonInput
 from app.activities.persistence import (
     PersistRunStateInput,
     RecordFinalOutputInput,
@@ -72,6 +73,7 @@ class Calls:
         self.run_agent = 0
         self.execute_action = 0
         self.final_summary = 0
+        self.store_lesson = 0
 
 
 def build_mock_activities(
@@ -119,6 +121,10 @@ def build_mock_activities(
     async def mock_set_run_status(input: SetRunStatusInput) -> None:
         pass
 
+    @activity.defn(name="store_lesson")
+    async def mock_store_lesson(input: StoreLessonInput) -> None:
+        calls.store_lesson += 1
+
     return [
         mock_run_agent,
         mock_run_agent_final_summary,
@@ -129,6 +135,7 @@ def build_mock_activities(
         mock_record_manual_instruction,
         mock_record_system_event,
         mock_set_run_status,
+        mock_store_lesson,
     ]
 
 
@@ -294,6 +301,46 @@ async def test_manual_terminate_completes_the_run(env: WorkflowEnvironment) -> N
         await handle.signal("terminate")
         await handle.result()
         assert calls.final_summary == 1
+        assert calls.store_lesson == 0  # no notable_problem -> nothing to remember
+
+
+async def test_notable_problem_triggers_store_lesson(env: WorkflowEnvironment) -> None:
+    """Custom addition beyond the spec (see README): when the wrap-up agent
+    flags a notable problem/resolution, the workflow must persist it to the
+    cross-run lessons store via the store_lesson activity."""
+    calls = Calls()
+
+    @activity.defn(name="run_agent_final_summary")
+    async def mock_final_summary_with_problem(input: AgentActivityInput) -> FinalOutput:
+        calls.final_summary += 1
+        return FinalOutput(
+            final_summary="done",
+            key_learnings="payments API was flaky",
+            feedback="none",
+            notable_problem="Payment provider timed out repeatedly for this order.",
+            notable_resolution="Retried with exponential backoff and it went through.",
+        )
+
+    activities = build_mock_activities(calls, sleep_seconds=3600)
+    activities[1] = mock_final_summary_with_problem  # swap in the notable-problem variant
+
+    async with Worker(
+        env.client,
+        task_queue=TASK_QUEUE,
+        workflows=[OrderSupervisorWorkflow],
+        activities=activities,
+    ):
+        handle = await env.client.start_workflow(
+            OrderSupervisorWorkflow.run,
+            make_snapshot(),
+            id=f"wf-{uuid.uuid4()}",
+            task_queue=TASK_QUEUE,
+        )
+        await env.sleep(timedelta(seconds=1))
+
+        await handle.signal("terminate")
+        await handle.result()
+        assert calls.store_lesson == 1
 
 
 async def test_actions_are_dispatched_and_recorded(env: WorkflowEnvironment) -> None:

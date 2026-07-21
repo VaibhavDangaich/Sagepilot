@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import runs, supervisors
+from app.api.routers import lessons, runs, supervisors
 from app.temporal_client import connect_temporal_client
 
 
@@ -27,6 +27,7 @@ app.add_middleware(
 
 app.include_router(supervisors.router)
 app.include_router(runs.router)
+app.include_router(lessons.router)
 
 
 @app.get("/health")

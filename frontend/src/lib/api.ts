@@ -1,6 +1,10 @@
 import type {
+  ChatRequest,
+  ChatResponse,
   CreateRunRequest,
   CreateSupervisorRequest,
+  LessonRecord,
+  LogLessonRequest,
   RunDetail,
   RunSummary,
   SupervisorConfig,
@@ -55,4 +59,17 @@ export const api = {
     request<{ status: string }>(`/api/runs/${runId}/resume`, { method: "POST" }),
   terminateRun: (runId: string) =>
     request<{ status: string }>(`/api/runs/${runId}/terminate`, { method: "POST" }),
+
+  logLesson: (runId: string, body: LogLessonRequest) =>
+    request<{ status: string }>(`/api/runs/${runId}/lessons`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  listLessons: () => request<LessonRecord[]>("/api/lessons"),
+
+  chatAboutRun: (runId: string, body: ChatRequest) =>
+    request<ChatResponse>(`/api/runs/${runId}/chat`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };

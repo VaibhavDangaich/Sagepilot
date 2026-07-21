@@ -4,6 +4,7 @@ from typing import Any
 from app.activities.agent_activity import run_agent, run_agent_final_summary
 from app.activities.business_actions import execute_action
 from app.activities.classifier_activity import handle_incoming_event
+from app.activities.lessons import store_lesson
 from app.activities.persistence import (
     persist_run_state,
     record_final_output,
@@ -22,4 +23,5 @@ ALL_ACTIVITIES: list[Callable[..., Any]] = [
     record_manual_instruction,
     record_system_event,
     set_run_status,
+    store_lesson,
 ]

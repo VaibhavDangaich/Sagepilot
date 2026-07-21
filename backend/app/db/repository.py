@@ -7,13 +7,14 @@ beyond this.
 
 from __future__ import annotations
 
+import math
 import uuid
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Run, RunActivityLog, Supervisor
+from app.db.models import LongTermLesson, Run, RunActivityLog, Supervisor
 from app.domain import (
     ActionName,
     ActivityLogKind,
@@ -133,3 +134,65 @@ async def get_timeline(
     rows = list(result.scalars())
     rows.reverse()
     return rows
+
+
+def cosine_similarity(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(y * y for y in b))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+async def insert_lesson(
+    session: AsyncSession,
+    *,
+    supervisor_id: str | None,
+    source_run_id: str,
+    order_id: str,
+    event_type: str | None,
+    problem: str,
+    resolution: str,
+    embedding: list[float],
+    source: str = "agent",
+    fault: str | None = None,
+) -> None:
+    session.add(
+        LongTermLesson(
+            supervisor_id=uuid.UUID(supervisor_id) if supervisor_id else None,
+            source_run_id=uuid.UUID(source_run_id),
+            order_id=order_id,
+            event_type=event_type,
+            problem=problem,
+            resolution=resolution,
+            embedding=embedding,
+            source=source,
+            fault=fault,
+        )
+    )
+
+
+async def list_recent_lessons(session: AsyncSession, *, limit: int = 50) -> list[LongTermLesson]:
+    stmt = select(LongTermLesson).order_by(LongTermLesson.created_at.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return list(result.scalars())
+
+
+async def find_similar_lessons(
+    session: AsyncSession,
+    query_embedding: list[float],
+    *,
+    limit: int = 3,
+    candidate_pool: int = 300,
+) -> list[LongTermLesson]:
+    """Cosine-similarity search computed in the application layer — see the
+    comment in schema.sql for why this isn't pgvector. `candidate_pool`
+    bounds how many recent rows are pulled in and ranked, so this stays
+    cheap even as the table grows well past what a POC would ever produce.
+    """
+    candidates = await list_recent_lessons(session, limit=candidate_pool)
+    ranked = sorted(
+        candidates, key=lambda row: cosine_similarity(row.embedding, query_embedding), reverse=True
+    )
+    return ranked[:limit]

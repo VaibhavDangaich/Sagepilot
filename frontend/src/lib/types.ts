@@ -108,3 +108,35 @@ export interface TimelineEntry {
   payload: Record<string, unknown>;
   created_at: string;
 }
+
+// Cross-run long-term memory — a custom addition beyond the assignment
+// spec (see root README's "Custom addition" section).
+export type LessonSource = "agent" | "human";
+export type FaultSide = "internal" | "client";
+
+export interface LessonRecord {
+  id: string;
+  order_id: string;
+  event_type: string | null;
+  problem: string;
+  resolution: string;
+  source: LessonSource;
+  fault: FaultSide | null;
+  created_at: string;
+}
+
+export interface LogLessonRequest {
+  fault: FaultSide;
+  problem: string;
+  resolution?: string;
+}
+
+// Stateless per-order chatbot — a custom addition beyond the assignment
+// spec (see root README).
+export interface ChatRequest {
+  question: string;
+}
+
+export interface ChatResponse {
+  answer: string;
+}

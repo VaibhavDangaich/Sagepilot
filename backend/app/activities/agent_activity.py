@@ -14,11 +14,16 @@ from pydantic import BaseModel
 from temporalio import activity
 
 from app.agent.compaction import compact_memory_if_needed
+from app.agent.embeddings import embed_text
 from app.agent.graph import AgentState, build_agent_graph
 from app.db.models import RunActivityLog
-from app.db.repository import get_timeline
+from app.db.repository import find_similar_lessons, get_timeline
 from app.db.session import session_scope
 from app.domain import ActivityLogKind, AgentDecision, FinalOutput, RunSnapshot
+
+# How many similar past lessons to surface per turn — see README's "Custom
+# addition" section for the long-term memory design.
+_RELEVANT_LESSONS_LIMIT = 3
 
 # Raw rows fetched before importance filtering, and how many low-signal
 # (routine) rows survive that filter — see _load_recent_timeline.
@@ -65,13 +70,32 @@ async def _load_recent_timeline(run_id: str) -> list[str]:
     return [_describe_log_row(row.kind, row.payload) for row in combined]
 
 
+async def _load_relevant_lessons(query_text: str) -> list[str]:
+    """Semantic search over the cross-run lessons store — a custom addition
+    beyond the spec (see README). Embeds the current situation and finds
+    the most similar past problem/resolution pairs from *any* order, not
+    just this one."""
+    if not query_text.strip():
+        return []
+    embedding = await embed_text(query_text)
+    async with session_scope() as session:
+        lessons = await find_similar_lessons(session, embedding, limit=_RELEVANT_LESSONS_LIMIT)
+    return [f"Problem: {row.problem}\nHow it was resolved: {row.resolution}" for row in lessons]
+
+
 class AgentActivityInput(BaseModel):
     snapshot: RunSnapshot
     trigger_reason: str
 
 
-async def _run_graph(input: AgentActivityInput, *, mode: str) -> AgentDecision | FinalOutput:
+async def _run_graph(
+    input: AgentActivityInput, *, mode: str
+) -> tuple[AgentDecision | FinalOutput, list[str]]:
     recent_timeline = await _load_recent_timeline(input.snapshot.run_id)
+    relevant_lessons: list[str] = []
+    if mode == "turn":
+        query_text = f"{input.trigger_reason}. {recent_timeline[-1] if recent_timeline else ''}"
+        relevant_lessons = await _load_relevant_lessons(query_text)
     graph = build_agent_graph()
     initial_state: AgentState = {
         "supervisor": input.snapshot.supervisor,
@@ -81,6 +105,7 @@ async def _run_graph(input: AgentActivityInput, *, mode: str) -> AgentDecision |
         "wake_policy": input.snapshot.wake_policy,
         "instructions": input.snapshot.additional_instructions,
         "recent_timeline": recent_timeline,
+        "relevant_lessons": relevant_lessons,
         "mode": mode,
     }
     final_state: AgentState = initial_state
@@ -90,18 +115,25 @@ async def _run_graph(input: AgentActivityInput, *, mode: str) -> AgentDecision |
     async for state_snapshot in graph.astream(initial_state, stream_mode="values"):
         activity.heartbeat()
         final_state = cast(AgentState, state_snapshot)
-    return final_state["decision"]
+    return final_state["decision"], relevant_lessons
 
 
 @activity.defn
 async def run_agent(input: AgentActivityInput) -> AgentDecision:
-    decision = cast(AgentDecision, await _run_graph(input, mode="turn"))
+    raw_decision, relevant_lessons = await _run_graph(input, mode="turn")
+    decision = cast(AgentDecision, raw_decision)
     compacted_summary = await compact_memory_if_needed(decision.memory_summary)
-    if compacted_summary != decision.memory_summary:
-        decision = decision.model_copy(update={"memory_summary": compacted_summary})
+    # consulted_lessons is UI-transparency bookkeeping (see README's "Custom
+    # addition" section) attached by this activity, not something the LLM
+    # itself is asked to produce — always overwritten here regardless of
+    # whatever the model's structured output happened to leave in that field.
+    decision = decision.model_copy(
+        update={"memory_summary": compacted_summary, "consulted_lessons": relevant_lessons}
+    )
     return decision
 
 
 @activity.defn
 async def run_agent_final_summary(input: AgentActivityInput) -> FinalOutput:
-    return cast(FinalOutput, await _run_graph(input, mode="final_summary"))
+    raw_decision, _ = await _run_graph(input, mode="final_summary")
+    return cast(FinalOutput, raw_decision)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from temporalio import activity
 
 from app.db.repository import append_activity_log, update_run
@@ -26,6 +26,7 @@ class PersistRunStateInput(BaseModel):
     reasoning_note: str
     sleep_seconds: int
     status: str
+    consulted_lessons: list[str] = Field(default_factory=list)
 
 
 @activity.defn
@@ -42,6 +43,7 @@ async def persist_run_state(input: PersistRunStateInput) -> None:
                 "next_wake_at": input.next_wake_at.isoformat() if input.next_wake_at else None,
                 "memory_summary": input.memory_summary,
                 "wake_policy": input.wake_policy,
+                "consulted_lessons": input.consulted_lessons,
             },
         )
         await update_run(

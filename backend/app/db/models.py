@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import ARRAY, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -65,4 +65,27 @@ class RunActivityLog(Base):
     seq: Mapped[int] = mapped_column(Integer)
     kind: Mapped[str] = mapped_column(Text)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class LongTermLesson(Base):
+    """Cross-run 'lessons learned' — a custom addition beyond the spec, see
+    README. `embedding` is a plain Postgres array (not pgvector — see the
+    comment in schema.sql for why), so similarity search is computed in
+    Python rather than pushed down to the database."""
+
+    __tablename__ = "long_term_lessons"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    supervisor_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("supervisors.id"), nullable=True
+    )
+    source_run_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("runs.id"), nullable=True)
+    order_id: Mapped[str] = mapped_column(Text)
+    event_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    problem: Mapped[str] = mapped_column(Text)
+    resolution: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(ARRAY(Float))
+    source: Mapped[str] = mapped_column(Text, default="agent")
+    fault: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

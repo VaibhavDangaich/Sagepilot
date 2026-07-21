@@ -22,6 +22,7 @@ with workflow.unsafe.imports_passed_through():
     )
     from app.activities.business_actions import ExecuteActionInput, execute_action
     from app.activities.classifier_activity import HandleIncomingEventInput, handle_incoming_event
+    from app.activities.lessons import StoreLessonInput, store_lesson
     from app.activities.persistence import (
         PersistRunStateInput,
         RecordFinalOutputInput,
@@ -253,6 +254,7 @@ class OrderSupervisorWorkflow:
                 reasoning_note=decision.reasoning_note,
                 sleep_seconds=decision.sleep_seconds,
                 status="sleeping",
+                consulted_lessons=decision.consulted_lessons,
             ),
             start_to_close_timeout=_BOOKKEEPING_ACTIVITY_TIMEOUT,
         )
@@ -285,3 +287,18 @@ class OrderSupervisorWorkflow:
             ),
             start_to_close_timeout=_BOOKKEEPING_ACTIVITY_TIMEOUT,
         )
+        if final.notable_problem and final.notable_resolution:
+            # Custom addition beyond the spec (see README): remember this
+            # problem/resolution for future, unrelated orders to draw on.
+            await workflow.execute_activity(
+                store_lesson,
+                StoreLessonInput(
+                    run_id=self._s.run_id,
+                    supervisor_id=self._s.supervisor.id,
+                    order_id=self._s.order_id,
+                    event_type=reason,
+                    problem=final.notable_problem,
+                    resolution=final.notable_resolution,
+                ),
+                start_to_close_timeout=_BOOKKEEPING_ACTIVITY_TIMEOUT,
+            )

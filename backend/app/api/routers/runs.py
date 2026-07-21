@@ -15,12 +15,22 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client, WorkflowHandle
 
+from app.agent.embeddings import embed_text
 from app.api import schemas
 from app.api.deps import get_temporal_client
-from app.api.schemas import AddInstructionRequest, CreateRunRequest, InjectEventRequest
+from app.api.schemas import (
+    AddInstructionRequest,
+    ChatRequest,
+    ChatResponse,
+    CreateRunRequest,
+    InjectEventRequest,
+    LogLessonRequest,
+)
 from app.config import get_settings
 from app.db import repository
 from app.db.session import get_session
@@ -97,6 +107,37 @@ async def get_memory(run_id: str, session: AsyncSession = Depends(get_session)) 
     return {"memory_summary": row.memory_summary, "wake_policy": row.wake_policy}
 
 
+@router.post("/{run_id}/lessons", status_code=201)
+async def log_lesson(
+    run_id: str,
+    body: LogLessonRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    """Human-curated lesson, logged directly against this run — the manual
+    counterpart to the AI-inferred lessons captured automatically at run
+    finalization. A custom addition beyond the spec (see README); this is a
+    quick out-of-band annotation, not part of the durable order-lifecycle
+    workflow, so it talks to the DB directly rather than through a Temporal
+    signal/activity."""
+    row = await repository.get_run(session, run_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    embedding = await embed_text(body.problem)
+    await repository.insert_lesson(
+        session,
+        supervisor_id=str(row.supervisor_id),
+        source_run_id=run_id,
+        order_id=row.order_id,
+        event_type=None,
+        problem=body.problem,
+        resolution=body.resolution,
+        embedding=embedding,
+        source="human",
+        fault=body.fault.value,
+    )
+    return {"status": "logged"}
+
+
 async def _get_handle(
     session: AsyncSession, temporal_client: Client, run_id: str
 ) -> WorkflowHandle[Any, Any]:
@@ -161,3 +202,54 @@ async def terminate_run(
     handle = await _get_handle(session, temporal_client, run_id)
     await handle.signal("terminate")
     return {"status": "accepted"}
+
+
+_CHAT_SYSTEM_PROMPT_TEMPLATE = """You are answering an admin's question about a single \
+order's supervision history. Answer ONLY from the context below — if the answer isn't \
+in it, say so plainly rather than guessing.
+
+Order: {order_id}
+Supervisor base instruction: {base_instruction}
+Current status: {status}
+Current memory summary: {memory_summary}
+Current wake policy: {wake_policy}
+{final_output_block}
+
+Full timeline (chronological, one entry per line):
+{timeline_text}"""
+
+
+@router.post("/{run_id}/chat", response_model=ChatResponse)
+async def chat_about_run(
+    run_id: str, body: ChatRequest, session: AsyncSession = Depends(get_session)
+) -> ChatResponse:
+    """Stateless Q&A grounded in this order's own timeline/memory — a
+    custom addition beyond the spec (see README). Kept deliberately
+    separate from the order-supervisor agent: this only ever reads and
+    answers, it never acts on the order."""
+    run = await repository.get_run(session, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    supervisor = await repository.get_supervisor(session, str(run.supervisor_id))
+    timeline = await repository.get_timeline(session, run_id)
+    timeline_text = "\n".join(f"[seq {row.seq}] [{row.kind}] {row.payload}" for row in timeline)
+    final_output_block = (
+        f"Final summary: {run.final_summary}\nKey learnings: {run.final_learnings}"
+        if run.final_summary
+        else ""
+    )
+
+    system_prompt = _CHAT_SYSTEM_PROMPT_TEMPLATE.format(
+        order_id=run.order_id,
+        base_instruction=supervisor.base_instruction if supervisor else "(unknown)",
+        status=run.status,
+        memory_summary=run.memory_summary or "(empty)",
+        wake_policy=run.wake_policy or "(none set)",
+        final_output_block=final_output_block,
+        timeline_text=timeline_text or "(no activity yet)",
+    )
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=get_settings().openai_api_key)
+    result = await llm.ainvoke(
+        [SystemMessage(content=system_prompt), HumanMessage(content=body.question)]
+    )
+    return ChatResponse(answer=str(result.content))

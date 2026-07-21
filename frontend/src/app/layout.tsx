@@ -62,6 +62,7 @@ export default function RootLayout({
             </Link>
             <NavLink href="/supervisors">Supervisors</NavLink>
             <NavLink href="/runs">Runs</NavLink>
+            <NavLink href="/lessons">Lessons</NavLink>
             <div className="ml-auto">
               <ThemeToggle />
             </div>

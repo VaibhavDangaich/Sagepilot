@@ -52,3 +52,36 @@ create table if not exists run_activity_log (
 );
 
 create index if not exists idx_run_activity_log_run_id_seq on run_activity_log (run_id, seq);
+
+-- Cross-run long-term memory (a custom addition beyond anything the spec
+-- asks for — see the README's "Custom addition" section). Stores
+-- problem/resolution pairs extracted at run-finalization time, embedded for
+-- semantic similarity search so a *future, unrelated* run can recall "a
+-- similar issue happened before and this is how it was resolved."
+--
+-- The embedding is a plain Postgres double precision[] rather than a
+-- pgvector column: pgvector isn't available for Postgres 14 (only 17+ at
+-- the time this was written), and requiring reviewers to run a newer major
+-- Postgres version just for this bonus feature would add real setup
+-- friction. Cosine similarity is computed in the application layer instead
+-- (see app/db/repository.py:find_similar_lessons) — entirely adequate at
+-- the data volumes a POC produces, and swapping in pgvector later only
+-- means changing that one function's internals, not its interface.
+create table if not exists long_term_lessons (
+    id              uuid primary key default gen_random_uuid(),
+    supervisor_id   uuid references supervisors (id),
+    source_run_id   uuid references runs (id),
+    order_id        text not null,
+    event_type      text, -- best-effort tag for display only, not used for retrieval
+    problem         text not null,
+    resolution      text not null,
+    embedding       double precision[] not null,
+    -- 'agent': auto-extracted by the wrap-up LLM call at run finalization.
+    -- 'human': manually logged from the UI against a specific timeline
+    -- entry — see the README's "Custom addition" section.
+    source          text not null default 'agent',
+    fault           text, -- 'internal' | 'client', human-entries only
+    created_at      timestamptz not null default now()
+);
+
+create index if not exists idx_long_term_lessons_created_at on long_term_lessons (created_at);
