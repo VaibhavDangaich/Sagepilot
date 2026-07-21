@@ -1,0 +1,18 @@
+.DS_Store
+*.log
+
+# Backend (Python)
+backend/.venv/
+backend/.env
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.mypy_cache/
+backend/.pytest_cache/
+backend/.ruff_cache/
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/.env*
+frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
