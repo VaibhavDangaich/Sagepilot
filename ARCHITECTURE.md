@@ -138,6 +138,28 @@ language or repo layout. The assignment doesn't require a hosted deployment (onl
 source + README + this note + a walkthrough video), so the backend and frontend are
 kept as ordinary separate local services instead.
 
+## Beyond the required scope
+
+On top of the required architecture above, this also adds a few things that aren't in
+the spec at all (full detail in `README.md`'s "What stands out" / "Custom additions"
+sections):
+
+- A **cross-run, semantic long-term-memory store** (`long_term_lessons`) — problem/
+  resolution pairs from any order, embedded with OpenAI `text-embedding-3-small` and
+  retrieved by cosine similarity, so a resolution on one order can inform a
+  semantically similar problem on a completely different order later. Populated both
+  automatically (the agent flags notable problems at run finalization) and manually
+  (a human can log a lesson with fault attribution — our side vs. client side — from
+  the UI).
+- A **force-directed graph view per order** (Cytoscape.js) as an alternative to the
+  timeline list, with a click-to-inspect panel, plus a **stateless per-order chatbot**
+  for free-text Q&A grounded in that order's own history.
+- Full **decision transparency** in the UI: which past lessons were consulted each
+  turn, and the raw payload behind every timeline entry.
+
+None of this is required for the core Temporal architecture to work — it's additive,
+and the required control flow described above is unaffected by any of it.
+
 ## Testing
 
 `backend/tests/test_workflow.py` exercises the actual workflow class against
