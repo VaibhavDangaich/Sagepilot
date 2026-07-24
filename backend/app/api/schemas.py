@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.agent.llm import default_model_config
 from app.db.models import LongTermLesson, Run, RunActivityLog
 from app.domain import (
     ActionName,
@@ -25,7 +26,7 @@ class CreateSupervisorRequest(BaseModel):
     base_instruction: str
     available_actions: list[ActionName] = Field(default_factory=lambda: list(ActionName))
     default_wake_policy: str = ""
-    llm_config: ModelConfig = Field(default_factory=ModelConfig, alias="model_config")
+    llm_config: ModelConfig = Field(default_factory=default_model_config, alias="model_config")
     wake_aggressiveness: WakeAggressiveness = WakeAggressiveness.BALANCED
     max_workflow_age_hours: int | None = None
 

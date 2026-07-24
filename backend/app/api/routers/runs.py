@@ -16,11 +16,11 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client, WorkflowHandle
 
 from app.agent.embeddings import embed_text
+from app.agent.llm import build_chat_model, default_model_for
 from app.api import schemas
 from app.api.deps import get_temporal_client
 from app.api.schemas import (
@@ -248,7 +248,8 @@ async def chat_about_run(
         final_output_block=final_output_block,
         timeline_text=timeline_text or "(no activity yet)",
     )
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=get_settings().openai_api_key)
+    provider = get_settings().default_provider
+    llm = build_chat_model(provider=provider, model=default_model_for(provider), temperature=0)
     result = await llm.ainvoke(
         [SystemMessage(content=system_prompt), HumanMessage(content=body.question)]
     )

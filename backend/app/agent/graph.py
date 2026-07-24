@@ -13,11 +13,10 @@ from __future__ import annotations
 from typing import Any, NotRequired, TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from app.config import get_settings
+from app.agent.llm import build_chat_model
 from app.domain import AgentDecision, FinalOutput, SupervisorConfig
 
 _SYSTEM_PROMPT = (
@@ -108,13 +107,10 @@ async def reason(state: AgentState) -> dict[str, Any]:
     # event loop while other activities are in flight alongside it.
     supervisor = state["supervisor"]
     output_schema = FinalOutput if state["mode"] == "final_summary" else AgentDecision
-    llm = ChatOpenAI(
+    llm = build_chat_model(
+        provider=supervisor.llm_config.provider,
         model=supervisor.llm_config.model,
         temperature=supervisor.llm_config.temperature,
-        # Passed explicitly rather than relying on the OPENAI_API_KEY
-        # process env var: pydantic-settings loads .env into our own
-        # Settings object only, it never exports values into os.environ.
-        api_key=get_settings().openai_api_key,
     ).with_structured_output(output_schema)
     decision = await llm.ainvoke(
         [SystemMessage(content=_SYSTEM_PROMPT), HumanMessage(content=state["prompt"])]

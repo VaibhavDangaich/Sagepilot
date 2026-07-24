@@ -46,7 +46,7 @@ and a richer two-layer memory-compaction strategy (see
 - **Frontend**: Next.js (App Router) + Tailwind CSS
 - **Backend**: Python, FastAPI
 - **Orchestration**: Temporal Python SDK (`temporalio`)
-- **Agent runtime**: LangGraph + LangChain (OpenAI)
+- **Agent runtime**: LangGraph + LangChain (OpenAI or Google Gemini — see [LLM provider](#llm-provider))
 - **Persistence**: PostgreSQL
 
 ## Bonus items ("Good-to-Have" from the spec)
@@ -313,7 +313,7 @@ sequenceDiagram
 - Node.js 20+ and `pnpm`
 - [Temporal CLI](https://docs.temporal.io/cli) (`brew install temporal`) — for a local dev server
 - A local PostgreSQL instance
-- An OpenAI API key
+- An LLM API key — either an OpenAI key **or** a Google Gemini key (see [LLM provider](#llm-provider))
 
 ## 1. Database
 
@@ -330,7 +330,7 @@ psql -d order_supervisor -f backend/app/db/schema.sql
 ```bash
 cd backend
 uv sync
-cp .env.example .env   # then fill in DATABASE_URL and OPENAI_API_KEY
+cp .env.example .env   # then fill in DATABASE_URL and your LLM key (see below)
 ```
 
 `.env` fields:
@@ -341,8 +341,26 @@ cp .env.example .env   # then fill in DATABASE_URL and OPENAI_API_KEY
 | `TEMPORAL_HOST` | defaults to `localhost:7233` |
 | `TEMPORAL_NAMESPACE` | defaults to `default` |
 | `TEMPORAL_TASK_QUEUE` | defaults to `order-supervisor-task-queue` |
-| `OPENAI_API_KEY` | required for the agent runtime to actually reason |
+| `DEFAULT_PROVIDER` | `openai` (default) or `google` — picks the provider for the classifier, memory compaction, chat endpoint, and embeddings |
+| `OPENAI_API_KEY` | required when using OpenAI |
 | `DEFAULT_OPENAI_MODEL` | defaults to `gpt-4o-mini` |
+| `GEMINI_API_KEY` | required when using Google Gemini |
+| `DEFAULT_GEMINI_MODEL` | defaults to `gemini-2.0-flash` |
+
+### LLM provider
+
+The runtime supports **OpenAI** and **Google Gemini**, selected by `DEFAULT_PROVIDER`.
+To run the whole stack on Gemini, set `DEFAULT_PROVIDER=google` and `GEMINI_API_KEY=...`
+— that switches the wake-up classifier, memory compaction, the admin chat endpoint, and
+the lessons embeddings. The main reasoning agent additionally honours a per-supervisor
+`provider` (in a supervisor's `model_config`); a supervisor created without one inherits
+`DEFAULT_PROVIDER`. All providers go through a single factory (`app/agent/llm.py`), so no
+call site instantiates a concrete client directly.
+
+> **One embedding provider per database.** The lessons store keeps raw embedding vectors
+> and ranks them with a strict-length cosine (`repository.py`). OpenAI (1536-dim) and Gemini
+> (3072-dim) vectors have different lengths and cannot coexist in one lessons table — pick a
+> provider before populating it. A fresh database is fine either way.
 
 Run three processes (separate terminals), in this order:
 

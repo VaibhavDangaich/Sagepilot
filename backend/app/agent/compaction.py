@@ -12,8 +12,8 @@ Most turns never hit the threshold, so this adds no cost to the common case.
 from __future__ import annotations
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 
+from app.agent.llm import build_chat_model, default_model_for
 from app.config import get_settings
 
 _COMPACTION_THRESHOLD_CHARS = 600
@@ -29,7 +29,8 @@ _COMPACTION_PROMPT = (
 async def compact_memory_if_needed(memory_summary: str) -> str:
     if len(memory_summary) <= _COMPACTION_THRESHOLD_CHARS:
         return memory_summary
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, api_key=get_settings().openai_api_key)
+    provider = get_settings().default_provider
+    llm = build_chat_model(provider=provider, model=default_model_for(provider), temperature=0)
     result = await llm.ainvoke(
         [SystemMessage(content=_COMPACTION_PROMPT), HumanMessage(content=memory_summary)]
     )

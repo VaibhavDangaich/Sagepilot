@@ -57,7 +57,7 @@ class _FakeLLMResult:
         self.content = content
 
 
-class _FakeChatOpenAI:
+class _FakeChatModel:
     def __init__(self, compacted: str) -> None:
         self._compacted = compacted
 
@@ -68,7 +68,7 @@ class _FakeChatOpenAI:
 async def test_long_summary_gets_compacted_via_llm(monkeypatch: Any) -> None:
     long_summary = "x" * 700
     monkeypatch.setattr(
-        compaction, "ChatOpenAI", lambda **kwargs: _FakeChatOpenAI("a much shorter summary")
+        compaction, "build_chat_model", lambda **kwargs: _FakeChatModel("a much shorter summary")
     )
     result = await compaction.compact_memory_if_needed(long_summary)
     assert result == "a much shorter summary"
@@ -78,6 +78,6 @@ async def test_long_summary_falls_back_to_original_on_empty_llm_response(
     monkeypatch: Any,
 ) -> None:
     long_summary = "y" * 700
-    monkeypatch.setattr(compaction, "ChatOpenAI", lambda **kwargs: _FakeChatOpenAI("   "))
+    monkeypatch.setattr(compaction, "build_chat_model", lambda **kwargs: _FakeChatModel("   "))
     result = await compaction.compact_memory_if_needed(long_summary)
     assert result == long_summary

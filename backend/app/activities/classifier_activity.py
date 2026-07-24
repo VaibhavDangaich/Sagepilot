@@ -24,10 +24,10 @@ from __future__ import annotations
 from typing import cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 from temporalio import activity
 
+from app.agent.llm import build_chat_model, default_model_for
 from app.config import get_settings
 from app.db.repository import append_activity_log
 from app.db.session import session_scope
@@ -74,10 +74,11 @@ The supervisor's current wake-policy guidance for this specific order (if any) i
 
 
 async def _llm_classify(event: OrderEvent, wake_policy: str) -> ClassifyDecision:
-    llm = ChatOpenAI(
-        model="gpt-4o-mini",
+    provider = get_settings().default_provider
+    llm = build_chat_model(
+        provider=provider,
+        model=default_model_for(provider),
         temperature=0,
-        api_key=get_settings().openai_api_key,
     ).with_structured_output(ClassifyDecision)
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(
         few_shot=_FEW_SHOT_EXAMPLES,

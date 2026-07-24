@@ -1,10 +1,11 @@
-"""Unit tests for the wake classifier — no live OpenAI calls.
+"""Unit tests for the wake classifier — no live LLM calls.
 
 The deterministic fast paths (always-important events, aggressive mode) are
-tested directly. The LLM-backed path is tested with a mocked `ChatOpenAI` so
-we can prove the *code-level* force-escalation override for unknown event
-types actually works — deliberately having the mocked LLM get it "wrong" to
-show the override doesn't depend on the LLM behaving correctly.
+tested directly. The LLM-backed path is tested with a mocked chat model (via
+the `build_chat_model` factory) so we can prove the *code-level*
+force-escalation override for unknown event types actually works —
+deliberately having the mocked LLM get it "wrong" to show the override doesn't
+depend on the LLM behaving correctly.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ class _FakeStructuredLLM:
         return self._canned
 
 
-class _FakeChatOpenAI:
+class _FakeChatModel:
     def __init__(self, canned: ClassifyDecision) -> None:
         self._canned = canned
 
@@ -49,7 +50,9 @@ class _FakeChatOpenAI:
 
 
 def _patch_llm(monkeypatch: Any, canned: ClassifyDecision) -> None:
-    monkeypatch.setattr(classifier_activity, "ChatOpenAI", lambda **kwargs: _FakeChatOpenAI(canned))
+    monkeypatch.setattr(
+        classifier_activity, "build_chat_model", lambda **kwargs: _FakeChatModel(canned)
+    )
 
 
 async def test_known_routine_event_uses_the_llms_classification(monkeypatch: Any) -> None:

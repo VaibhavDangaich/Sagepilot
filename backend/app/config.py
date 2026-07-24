@@ -14,8 +14,17 @@ class Settings(BaseSettings):
     temporal_namespace: str = "default"
     temporal_task_queue: str = "order-supervisor-task-queue"
 
+    # Which provider the classifier / embeddings default to when a
+    # SupervisorConfig doesn't pin one explicitly. Either "openai" or "google".
+    default_provider: str = "openai"
+
     openai_api_key: str = ""
     default_openai_model: str = "gpt-4o-mini"
+
+    # Google Gemini support. Set GEMINI_API_KEY (and provider="google", or
+    # DEFAULT_PROVIDER=google) to run the agent on Gemini instead of OpenAI.
+    gemini_api_key: str = ""
+    default_gemini_model: str = "gemini-2.0-flash"
 
     # Threshold for continue_as_new: number of activity-log rows appended
     # since workflow start (or last continue_as_new) before compacting.
